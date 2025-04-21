@@ -15,7 +15,6 @@ void printCursorPos() {
 }
 
 // taken from: https://stackoverflow.com/questions/54912038/querying-windows-display-scaling
-// TODO: add denpendency management to this probject
 std::pair<double, double> getScalingFactors(){
     auto activeWindow = GetActiveWindow();
     HMONITOR monitor = MonitorFromWindow(activeWindow, MONITOR_DEFAULTTONEAREST);
@@ -43,6 +42,9 @@ std::pair<double, double> getScalingFactors(){
 }
 
 LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
+    static bool isDragging = false;
+    static POINT rectStart = {}, rectEnd = {};
+
     switch (uMsg) {
     case WM_PAINT: {
         PAINTSTRUCT ps;
@@ -63,9 +65,54 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) 
         SelectObject(hdcMemory, hOldBitmap);
         DeleteDC(hdcMemory);
 
+        // Draw the red rectangle if dragging
+        if (isDragging) {
+            HPEN hPen = CreatePen(PS_SOLID, 1, RGB(255, 0, 0)); // Red pen
+            HGDIOBJ hOldPen = SelectObject(hdc, hPen);
+            HGDIOBJ hOldBrush = SelectObject(hdc, GetStockObject(NULL_BRUSH)); // No fill
+
+            Rectangle(hdc, rectStart.x, rectStart.y, rectEnd.x, rectEnd.y);
+
+            SelectObject(hdc, hOldPen);
+            SelectObject(hdc, hOldBrush);
+            DeleteObject(hPen);
+        }
+
         EndPaint(hwnd, &ps);
         return 0;
     }
+    case WM_LBUTTONDOWN: {
+        isDragging = true;
+        GetCursorPos(&rectStart);
+        GetCursorPos(&rectEnd);  // init end point to start point
+        return 0;
+    }
+    case WM_MOUSEMOVE: {
+        if (isDragging){
+            GetCursorPos(&rectEnd);
+            InvalidateRect(hwnd, NULL, FALSE); // trigger a repaint of the window
+            std::cout << rectEnd.x << ' ' << rectEnd.y << '\n';
+        }
+        return 0;
+    }
+    case WM_LBUTTONUP: {
+        isDragging = false;
+        GetCursorPos(&rectEnd);
+        InvalidateRect(hwnd, NULL, false);
+    }
+    case WM_SETCURSOR: {
+        // set cursor to cross
+        SetCursor(LoadCursor(NULL, IDC_CROSS));
+        return TRUE;
+    }
+    case WM_KEYDOWN: {
+        // Close the window when ESC is pressed
+        if (wParam == VK_ESCAPE) {
+            PostQuitMessage(0); // Posts a WM_QUIT message to exit the message loop
+        }
+        return 0;
+    }
+    
     case WM_DESTROY:
         PostQuitMessage(0);
         return 0;
@@ -89,14 +136,18 @@ void displayBitmap() {
         return;
     }
 
+    // get screen dimensions
+    int screenWidth = GetSystemMetrics(SM_CXSCREEN);
+    int screenHeight = GetSystemMetrics(SM_CYSCREEN);
+
     // Create the window
     HWND hwnd = CreateWindowEx(
-        0,                              // Optional window styles
+        WS_EX_TOOLWINDOW, // prevents window appearing in alt+tab list
         CLASS_NAME,                     // Window class
         "",                             // Window title
-        WS_OVERLAPPEDWINDOW,            // Window style
-        CW_USEDEFAULT, CW_USEDEFAULT,   // Position
-        CW_USEDEFAULT, CW_USEDEFAULT,   // Size
+        WS_POPUP,            // Window style
+        0, 0,
+        screenWidth, screenHeight,
         NULL,                           // Parent window
         NULL,                           // Menu
         GetModuleHandle(NULL),          // Instance handle
@@ -174,3 +225,7 @@ int main() {
     DeleteObject(screenBitmap);
     return 0;
 }
+
+
+// TODO: add denpendency management to this probject
+// TODO: add linter to project
