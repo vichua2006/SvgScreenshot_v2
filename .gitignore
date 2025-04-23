@@ -50,3 +50,7 @@ Makefile
 *.swp
 *.DS_Store
 Thumbs.db
+
+# Ignore todo list files
+/todo/
+*.todo
