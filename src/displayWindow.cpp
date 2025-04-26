@@ -5,14 +5,9 @@
 #include <thread>
 #include <iostream>
 #include <ShellScalingApi.h>
+#include "displayWindow.h"
 
 HBITMAP screenBitmap; // global bitmap handle; stores screenshot
-
-void printCursorPos() {
-    POINT p;
-    GetCursorPos(&p); // function takes a pointer/address to a POINT struct
-    std::cout << p.x << " " << p.y << std::endl;
-}
 
 // taken from: https://stackoverflow.com/questions/54912038/querying-windows-display-scaling
 std::pair<double, double> getScalingFactors(){
@@ -41,7 +36,7 @@ std::pair<double, double> getScalingFactors(){
     return std::make_pair(horizontalScale, verticalScale);
 }
 
-LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
+LRESULT CALLBACK ScreenShotWndProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
     static bool isDragging = false;
     static POINT rectStart = {}, rectEnd = {};
 
@@ -127,7 +122,7 @@ void displayBitmap() {
     // Register the window class
     const char CLASS_NAME[] = "BitmapWindow";
     WNDCLASS wc = {};
-    wc.lpfnWndProc = WindowProc;
+    wc.lpfnWndProc = ScreenShotWndProc;
     wc.hInstance = GetModuleHandle(NULL);
     wc.lpszClassName = CLASS_NAME;
 
@@ -212,20 +207,3 @@ void captureScreenToBitmap(HBITMAP *hBitmap) {
     DeleteDC(hdcMemory);
     ReleaseDC(NULL, hdcScreen);
 }
-
-int main() {
-
-    // make the application DPI (Dot Per Inch) aware
-    // basically make windows provide the actual physical dimension of the screen to the program,
-    // instead of virtual dimensions caused by scaling
-    SetProcessDpiAwareness(PROCESS_PER_MONITOR_DPI_AWARE);
-    captureScreenToBitmap(&screenBitmap);
-    displayBitmap();
-
-    DeleteObject(screenBitmap);
-    return 0;
-}
-
-
-// TODO: add denpendency management to this probject
-// TODO: add linter to project
