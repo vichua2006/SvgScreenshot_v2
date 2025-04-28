@@ -1,9 +1,10 @@
-#include <Windows.h>
 #include <ShellScalingApi.h>
+#include <Windows.h>
+
 #include "displayWindow.h"
 
-int main() {
 
+int main() {
     // make the application DPI (Dot Per Inch) aware
     // basically make windows provide the actual physical dimension of the screen to the program,
     // instead of virtual dimensions caused by scaling
@@ -14,4 +15,3 @@ int main() {
     DeleteObject(screenBitmap);
     return 0;
 }
-

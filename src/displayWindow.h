@@ -2,8 +2,10 @@
 #define DISWIN_h
 
 #include <Windows.h>
+
 #include <chrono>
 #include <thread>
+
 
 std::pair<double, double> getScalingFactors();
 
@@ -12,5 +14,4 @@ LRESULT CALLBACK ScreenShotWndProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM l
 void displayBitmap();
 
 void captureScreenToBitmap(HBITMAP *hBitmap) {
-
 #endif

@@ -1,16 +1,18 @@
-#define _WIN32_WINNT 0x0603 // Windows 8.1 or later
+#define _WIN32_WINNT 0x0603  // Windows 8.1 or later
 
-#include <Windows.h>
-#include <chrono>
-#include <thread>
-#include <iostream>
 #include <ShellScalingApi.h>
+#include <Windows.h>
+
+#include <chrono>
+#include <iostream>
+#include <thread>
+
 #include "displayWindow.h"
 
-HBITMAP screenBitmap; // global bitmap handle; stores screenshot
+HBITMAP screenBitmap;  // global bitmap handle; stores screenshot
 
 // taken from: https://stackoverflow.com/questions/54912038/querying-windows-display-scaling
-std::pair<double, double> getScalingFactors(){
+std::pair<double, double> getScalingFactors() {
     auto activeWindow = GetActiveWindow();
     HMONITOR monitor = MonitorFromWindow(activeWindow, MONITOR_DEFAULTTONEAREST);
 
@@ -30,8 +32,8 @@ std::pair<double, double> getScalingFactors(){
     auto cyPhysical = devMode.dmPelsHeight;
 
     // Calculate the scaling factor
-    double horizontalScale = ((double) cxPhysical / (double) cxLogical);
-    double verticalScale = ((double) cyPhysical / (double) cyLogical);
+    double horizontalScale = ((double)cxPhysical / (double)cxLogical);
+    double verticalScale = ((double)cyPhysical / (double)cyLogical);
 
     return std::make_pair(horizontalScale, verticalScale);
 }
@@ -41,76 +43,76 @@ LRESULT CALLBACK ScreenShotWndProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM l
     static POINT rectStart = {}, rectEnd = {};
 
     switch (uMsg) {
-    case WM_PAINT: {
-        PAINTSTRUCT ps;
-        HDC hdc = BeginPaint(hwnd, &ps);
+        case WM_PAINT: {
+            PAINTSTRUCT ps;
+            HDC hdc = BeginPaint(hwnd, &ps);
 
-        // Create a memory DC and select the bitmap into it
-        HDC hdcMemory = CreateCompatibleDC(hdc);
-        HBITMAP hOldBitmap = (HBITMAP)SelectObject(hdcMemory, screenBitmap);
+            // Create a memory DC and select the bitmap into it
+            HDC hdcMemory = CreateCompatibleDC(hdc);
+            HBITMAP hOldBitmap = (HBITMAP)SelectObject(hdcMemory, screenBitmap);
 
-        // Get the bitmap dimensions
-        BITMAP bitmap;
-        GetObject(screenBitmap, sizeof(BITMAP), &bitmap);
+            // Get the bitmap dimensions
+            BITMAP bitmap;
+            GetObject(screenBitmap, sizeof(BITMAP), &bitmap);
 
-        // Draw the bitmap onto the window
-        BitBlt(hdc, 0, 0, bitmap.bmWidth, bitmap.bmHeight, hdcMemory, 0, 0, SRCCOPY);
+            // Draw the bitmap onto the window
+            BitBlt(hdc, 0, 0, bitmap.bmWidth, bitmap.bmHeight, hdcMemory, 0, 0, SRCCOPY);
 
-        // Cleanup
-        SelectObject(hdcMemory, hOldBitmap);
-        DeleteDC(hdcMemory);
+            // Cleanup
+            SelectObject(hdcMemory, hOldBitmap);
+            DeleteDC(hdcMemory);
 
-        // Draw the red rectangle if dragging
-        if (isDragging) {
-            HPEN hPen = CreatePen(PS_SOLID, 1, RGB(255, 0, 0)); // Red pen
-            HGDIOBJ hOldPen = SelectObject(hdc, hPen);
-            HGDIOBJ hOldBrush = SelectObject(hdc, GetStockObject(NULL_BRUSH)); // No fill
+            // Draw the red rectangle if dragging
+            if (isDragging) {
+                HPEN hPen = CreatePen(PS_SOLID, 1, RGB(255, 0, 0));  // Red pen
+                HGDIOBJ hOldPen = SelectObject(hdc, hPen);
+                HGDIOBJ hOldBrush = SelectObject(hdc, GetStockObject(NULL_BRUSH));  // No fill
 
-            Rectangle(hdc, rectStart.x, rectStart.y, rectEnd.x, rectEnd.y);
+                Rectangle(hdc, rectStart.x, rectStart.y, rectEnd.x, rectEnd.y);
 
-            SelectObject(hdc, hOldPen);
-            SelectObject(hdc, hOldBrush);
-            DeleteObject(hPen);
+                SelectObject(hdc, hOldPen);
+                SelectObject(hdc, hOldBrush);
+                DeleteObject(hPen);
+            }
+
+            EndPaint(hwnd, &ps);
+            return 0;
         }
-
-        EndPaint(hwnd, &ps);
-        return 0;
-    }
-    case WM_LBUTTONDOWN: {
-        isDragging = true;
-        GetCursorPos(&rectStart);
-        GetCursorPos(&rectEnd);  // init end point to start point
-        return 0;
-    }
-    case WM_MOUSEMOVE: {
-        if (isDragging){
+        case WM_LBUTTONDOWN: {
+            isDragging = true;
+            GetCursorPos(&rectStart);
+            GetCursorPos(&rectEnd);  // init end point to start point
+            return 0;
+        }
+        case WM_MOUSEMOVE: {
+            if (isDragging) {
+                GetCursorPos(&rectEnd);
+                InvalidateRect(hwnd, NULL, FALSE);  // trigger a repaint of the window
+                std::cout << rectEnd.x << ' ' << rectEnd.y << '\n';
+            }
+            return 0;
+        }
+        case WM_LBUTTONUP: {
+            isDragging = false;
             GetCursorPos(&rectEnd);
-            InvalidateRect(hwnd, NULL, FALSE); // trigger a repaint of the window
-            std::cout << rectEnd.x << ' ' << rectEnd.y << '\n';
+            InvalidateRect(hwnd, NULL, false);
         }
-        return 0;
-    }
-    case WM_LBUTTONUP: {
-        isDragging = false;
-        GetCursorPos(&rectEnd);
-        InvalidateRect(hwnd, NULL, false);
-    }
-    case WM_SETCURSOR: {
-        // set cursor to cross
-        SetCursor(LoadCursor(NULL, IDC_CROSS));
-        return TRUE;
-    }
-    case WM_KEYDOWN: {
-        // Close the window when ESC is pressed
-        if (wParam == VK_ESCAPE) {
-            PostQuitMessage(0); // Posts a WM_QUIT message to exit the message loop
+        case WM_SETCURSOR: {
+            // set cursor to cross
+            SetCursor(LoadCursor(NULL, IDC_CROSS));
+            return TRUE;
         }
-        return 0;
-    }
-    
-    case WM_DESTROY:
-        PostQuitMessage(0);
-        return 0;
+        case WM_KEYDOWN: {
+            // Close the window when ESC is pressed
+            if (wParam == VK_ESCAPE) {
+                PostQuitMessage(0);  // Posts a WM_QUIT message to exit the message loop
+            }
+            return 0;
+        }
+
+        case WM_DESTROY:
+            PostQuitMessage(0);
+            return 0;
     }
     return DefWindowProc(hwnd, uMsg, wParam, lParam);
 }
@@ -136,17 +138,15 @@ void displayBitmap() {
     int screenHeight = GetSystemMetrics(SM_CYSCREEN);
 
     // Create the window
-    HWND hwnd = CreateWindowEx(
-        WS_EX_TOOLWINDOW, // prevents window appearing in alt+tab list
-        CLASS_NAME,                     // Window class
-        "",                             // Window title
-        WS_POPUP,            // Window style
-        0, 0,
-        screenWidth, screenHeight,
-        NULL,                           // Parent window
-        NULL,                           // Menu
-        GetModuleHandle(NULL),          // Instance handle
-        NULL                            // Additional application data
+    HWND hwnd = CreateWindowEx(WS_EX_TOOLWINDOW,  // prevents window appearing in alt+tab list
+                               CLASS_NAME,        // Window class
+                               "",                // Window title
+                               WS_POPUP,          // Window style
+                               0, 0, screenWidth, screenHeight,
+                               NULL,                   // Parent window
+                               NULL,                   // Menu
+                               GetModuleHandle(NULL),  // Instance handle
+                               NULL                    // Additional application data
     );
 
     if (!hwnd) {
@@ -172,8 +172,8 @@ void captureScreenToBitmap(HBITMAP *hBitmap) {
 
     // Get the screen dimensions and scale to correct size
     auto [horizontalScaling, verticalScaling] = getScalingFactors();
-    int screenWidth = ((double) horizontalScaling * (double) GetSystemMetrics(SM_CXSCREEN));
-    int screenHeight = ((double) verticalScaling * (double) GetSystemMetrics(SM_CYSCREEN));
+    int screenWidth = ((double)horizontalScaling * (double)GetSystemMetrics(SM_CXSCREEN));
+    int screenHeight = ((double)verticalScaling * (double)GetSystemMetrics(SM_CYSCREEN));
 
     std::cout << screenWidth << '\n' << screenHeight << std::endl;
 
