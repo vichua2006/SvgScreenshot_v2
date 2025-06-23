@@ -53,3 +53,8 @@ Thumbs.db
 # Ignore todo list files
 /todo/
 *.todo
+# Python artifacts
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
