@@ -16,8 +16,9 @@ After the dependencies are installed, build the project using the provided
 ```bash
 make
 ```
-
-This will produce `screenshot.exe` in the repository root. If you prefer to
+If the build fails with `windows.h: No such file or directory`, run `./setup.sh`
+to install the MinGW cross toolchain. The successful build produces
+`screenshot.exe` in the repository root. If you prefer to
 invoke the compiler manually, use:
 
 ```bash
@@ -26,3 +27,22 @@ x86_64-w64-mingw32-g++ src/*.cpp -lgdi32 -lole32 -luuid -lcomdlg32 -lshell32 -lm
 
 Note that compilation on non-Windows hosts still requires a cross compiler such
 as `mingw-w64`.
+
+## Screenshots and Electron UI
+
+Captured selections are now written to the `screenshots` directory in the
+repository root. Each file is saved as `screenshot_<timestamp>.bmp`.
+
+An example Electron application lives in `electron-app`. It lists the images in
+the screenshots folder and displays them. Run it after installing dependencies
+with:
+
+```bash
+cd electron-app
+npm install
+npm start
+```
+
+When running as the root user (such as in some containers) the Electron runtime
+requires the `--no-sandbox` flag. The provided `npm start` script already adds
+this flag.
