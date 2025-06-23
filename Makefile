@@ -1,6 +1,6 @@
 CXX ?= x86_64-w64-mingw32-g++
-CXXFLAGS ?= -std=c++17 -Wall -O2
-LDFLAGS = -lgdi32 -lole32 -luuid -lcomdlg32 -lshell32 -lmsimg32
+CXXFLAGS ?= -std=c++17 -Wall -O2 $(shell pkg-config --cflags opencv4 2>/dev/null)
+LDFLAGS = -lgdi32 -lole32 -luuid -lcomdlg32 -lshell32 -lmsimg32 $(shell pkg-config --libs opencv4 2>/dev/null)
 
 SRC_DIR := src
 SRCS := $(wildcard $(SRC_DIR)/*.cpp)

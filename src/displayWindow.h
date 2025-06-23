@@ -24,4 +24,8 @@ extern HBITMAP screenBitmap;
 // Copies the selected area of the screen bitmap to the clipboard.
 void copySelectionToClipboard(POINT start, POINT end);
 
+// Saves the given bitmap as a PNG file. Uses OpenCV to detect nearly white
+// background pixels and make them transparent. Returns true on success.
+bool saveBitmapAsPngWithoutBackground(HBITMAP bitmap, const wchar_t* filename);
+
 #endif  // DISWIN_h

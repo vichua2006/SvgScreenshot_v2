@@ -11,6 +11,10 @@
 #include <utility>
 #include <algorithm>
 #include <cstdlib>
+#include <locale>
+#include <codecvt>
+#include <vector>
+#include <opencv2/opencv.hpp>
 
 HBITMAP screenBitmap;  // global bitmap handle; stores screenshot
 
@@ -285,4 +289,50 @@ void copySelectionToClipboard(POINT start, POINT end) {
     else {
         DeleteObject(hbmCrop);
     }
+}
+
+bool saveBitmapAsPngWithoutBackground(HBITMAP bitmap, const wchar_t* filename) {
+    if (!bitmap || !filename) {
+        return false;
+    }
+
+    BITMAP bmp = {};
+    if (!GetObject(bitmap, sizeof(BITMAP), &bmp)) {
+        return false;
+    }
+
+    BITMAPINFO bmi = {};
+    bmi.bmiHeader.biSize = sizeof(BITMAPINFOHEADER);
+    bmi.bmiHeader.biWidth = bmp.bmWidth;
+    bmi.bmiHeader.biHeight = -bmp.bmHeight; // top-down
+    bmi.bmiHeader.biPlanes = 1;
+    bmi.bmiHeader.biBitCount = 32;
+    bmi.bmiHeader.biCompression = BI_RGB;
+
+    cv::Mat img(bmp.bmHeight, bmp.bmWidth, CV_8UC4);
+    HDC hdc = GetDC(NULL);
+    if (!GetDIBits(hdc, bitmap, 0, bmp.bmHeight, img.data, &bmi, DIB_RGB_COLORS)) {
+        ReleaseDC(NULL, hdc);
+        return false;
+    }
+    ReleaseDC(NULL, hdc);
+
+    cv::Mat gray;
+    cv::cvtColor(img, gray, cv::COLOR_BGRA2GRAY);
+
+    cv::Mat mask;
+    cv::threshold(gray, mask, 250, 255, cv::THRESH_BINARY);
+    cv::Mat kernel = cv::getStructuringElement(cv::MORPH_RECT, cv::Size(3,3));
+    cv::morphologyEx(mask, mask, cv::MORPH_CLOSE, kernel);
+    cv::bitwise_not(mask, mask);
+
+    std::vector<cv::Mat> channels;
+    cv::split(img, channels);
+    channels[3] = mask;
+    cv::merge(channels, img);
+
+    std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>> conv;
+    std::string path = conv.to_bytes(filename);
+
+    return cv::imwrite(path, img);
 }
