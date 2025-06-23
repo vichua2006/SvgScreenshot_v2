@@ -26,3 +26,18 @@ x86_64-w64-mingw32-g++ src/*.cpp -lgdi32 -lole32 -luuid -lcomdlg32 -lshell32 -lm
 
 Note that compilation on non-Windows hosts still requires a cross compiler such
 as `mingw-w64`.
+
+## FastAPI backend
+
+This repository also includes a small FastAPI application for storing screenshot metadata in MongoDB. The server exposes two endpoints to create and list screenshots.
+
+### Running
+
+Install the Python dependencies and start the server with Uvicorn:
+
+```bash
+pip install -r requirements.txt
+MONGO_URI="<your mongodb atlas uri>" uvicorn backend.main:app --reload
+```
+
+The API uses a collection called `screenShots` in the database specified by the `MONGO_DB_NAME` environment variable (defaults to `screenshots_db`).
