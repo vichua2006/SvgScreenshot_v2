@@ -1,13 +1,14 @@
 #define _WIN32_WINNT 0x0603  // Windows 8.1 or later
 
+#include "displayWindow.h"
+
 #include <windows.h>
 
+#include <algorithm>
 #include <chrono>
 #include <iostream>
 #include <thread>
 #include <utility>
-
-#include "displayWindow.h"
 
 HBITMAP screenBitmap;  // global bitmap handle; stores screenshot
 
@@ -62,17 +63,49 @@ LRESULT CALLBACK ScreenShotWndProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM l
             SelectObject(hdcMemory, hOldBitmap);
             DeleteDC(hdcMemory);
 
-            // Draw the red rectangle if dragging
+            // Draw the red rectangle and darken the area outside of it if dragging
             if (isDragging) {
-                HPEN hPen = CreatePen(PS_SOLID, 1, RGB(255, 0, 0));  // Red pen
+                // Normalize the rectangle coordinates in case the user drags in any direction
+                int left = std::min(rectStart.x, rectEnd.x);
+                int top = std::min(rectStart.y, rectEnd.y);
+                int right = std::max(rectStart.x, rectEnd.x);
+                int bottom = std::max(rectStart.y, rectEnd.y);
+
+                // Create a semi-transparent overlay DC
+                HDC hdcOverlay = CreateCompatibleDC(hdc);
+                HBITMAP hOverlayBitmap =
+                    CreateCompatibleBitmap(hdc, bitmap.bmWidth, bitmap.bmHeight);
+                HBITMAP hOldOverlayBitmap = (HBITMAP)SelectObject(hdcOverlay, hOverlayBitmap);
+                HBRUSH hBrush = CreateSolidBrush(RGB(0, 0, 0));
+                RECT fullRect = {0, 0, bitmap.bmWidth, bitmap.bmHeight};
+                FillRect(hdcOverlay, &fullRect, hBrush);
+
+                BLENDFUNCTION blend = {AC_SRC_OVER, 0, 128, 0};  // 50% opacity
+
+                // Darken the four regions outside the selection rectangle
+                AlphaBlend(hdc, 0, 0, bitmap.bmWidth, top, hdcOverlay, 0, 0, bitmap.bmWidth, top,
+                           blend);  // Top
+                AlphaBlend(hdc, 0, bottom, bitmap.bmWidth, bitmap.bmHeight - bottom, hdcOverlay, 0,
+                           0, bitmap.bmWidth, bitmap.bmHeight - bottom, blend);  // Bottom
+                AlphaBlend(hdc, 0, top, left, bottom - top, hdcOverlay, 0, 0, left, bottom - top,
+                           blend);  // Left
+                AlphaBlend(hdc, right, top, bitmap.bmWidth - right, bottom - top, hdcOverlay, 0, 0,
+                           bitmap.bmWidth - right, bottom - top, blend);  // Right
+
+                // Draw the red rectangle outline
+                HPEN hPen = CreatePen(PS_SOLID, 1, RGB(255, 0, 0));
                 HGDIOBJ hOldPen = SelectObject(hdc, hPen);
-                HGDIOBJ hOldBrush = SelectObject(hdc, GetStockObject(NULL_BRUSH));  // No fill
-
-                Rectangle(hdc, rectStart.x, rectStart.y, rectEnd.x, rectEnd.y);
-
+                HGDIOBJ hOldBrush = SelectObject(hdc, GetStockObject(NULL_BRUSH));
+                Rectangle(hdc, left, top, right, bottom);
                 SelectObject(hdc, hOldPen);
                 SelectObject(hdc, hOldBrush);
+
+                // Cleanup overlay resources
+                SelectObject(hdcOverlay, hOldOverlayBitmap);
+                DeleteObject(hOverlayBitmap);
+                DeleteObject(hBrush);
                 DeleteObject(hPen);
+                DeleteDC(hdcOverlay);
             }
 
             EndPaint(hwnd, &ps);

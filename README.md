@@ -13,7 +13,7 @@ This project targets Windows and requires the Windows SDK. On Debian-based syste
 After the dependencies are installed, compile with the MinGW cross compiler:
 
 ```bash
-x86_64-w64-mingw32-g++ src/*.cpp -lgdi32 -lole32 -luuid -lcomdlg32 -lshell32 -o screenshot.exe
+x86_64-w64-mingw32-g++ src/*.cpp -lgdi32 -lole32 -luuid -lcomdlg32 -lshell32 -lmsimg32 -o screenshot.exe
 ```
 
 Note that compilation on non-Windows hosts requires a cross compiler such as `mingw-w64`.
