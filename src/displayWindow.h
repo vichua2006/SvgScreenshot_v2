@@ -21,4 +21,7 @@ void captureScreenToBitmap(HBITMAP *hBitmap);
 // displayWindow.cpp so that it can be used by multiple translation units.
 extern HBITMAP screenBitmap;
 
+// Copies the selected area of the screen bitmap to the clipboard.
+void copySelectionToClipboard(POINT start, POINT end);
+
 #endif  // DISWIN_h
