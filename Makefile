@@ -1,0 +1,21 @@
+CXX ?= x86_64-w64-mingw32-g++
+CXXFLAGS ?= -std=c++17 -Wall -O2
+LDFLAGS = -lgdi32 -lole32 -luuid -lcomdlg32 -lshell32 -lmsimg32
+
+SRC_DIR := src
+SRCS := $(wildcard $(SRC_DIR)/*.cpp)
+OBJS := $(SRCS:.cpp=.o)
+TARGET := screenshot.exe
+
+.PHONY: all clean
+
+all: $(TARGET)
+
+$(TARGET): $(OBJS)
+	$(CXX) $(OBJS) $(LDFLAGS) -o $@
+
+%.o: %.cpp
+	$(CXX) $(CXXFLAGS) -c $< -o $@
+
+clean:
+	rm -f $(OBJS) $(TARGET)
