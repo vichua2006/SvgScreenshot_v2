@@ -48,7 +48,7 @@ LRESULT CALLBACK ScreenShotWndProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM l
             PAINTSTRUCT ps;
             HDC hdc = BeginPaint(hwnd, &ps);
 
-            // Create a memory DC and select the bitmap into it
+            // Create a memory DC for the screenshot
             HDC hdcMemory = CreateCompatibleDC(hdc);
             HBITMAP hOldBitmap = (HBITMAP)SelectObject(hdcMemory, screenBitmap);
 
@@ -56,8 +56,13 @@ LRESULT CALLBACK ScreenShotWndProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM l
             BITMAP bitmap;
             GetObject(screenBitmap, sizeof(BITMAP), &bitmap);
 
-            // Draw the bitmap onto the window
-            BitBlt(hdc, 0, 0, bitmap.bmWidth, bitmap.bmHeight, hdcMemory, 0, 0, SRCCOPY);
+            // Create an off-screen buffer to avoid flicker when redrawing
+            HDC hdcBuffer = CreateCompatibleDC(hdc);
+            HBITMAP hBufferBitmap = CreateCompatibleBitmap(hdc, bitmap.bmWidth, bitmap.bmHeight);
+            HBITMAP hOldBufferBitmap = (HBITMAP)SelectObject(hdcBuffer, hBufferBitmap);
+
+            // Draw the screenshot into the buffer first
+            BitBlt(hdcBuffer, 0, 0, bitmap.bmWidth, bitmap.bmHeight, hdcMemory, 0, 0, SRCCOPY);
 
             // Create a semi-transparent overlay to darken the entire screen
             HDC hdcOverlay = CreateCompatibleDC(hdc);
@@ -69,7 +74,7 @@ LRESULT CALLBACK ScreenShotWndProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM l
             FillRect(hdcOverlay, &fullRect, hBrush);
 
             BLENDFUNCTION blend = {AC_SRC_OVER, 0, 128, 0};  // 50% opacity
-            AlphaBlend(hdc, 0, 0, bitmap.bmWidth, bitmap.bmHeight, hdcOverlay, 0, 0,
+            AlphaBlend(hdcBuffer, 0, 0, bitmap.bmWidth, bitmap.bmHeight, hdcOverlay, 0, 0,
                        bitmap.bmWidth, bitmap.bmHeight, blend);
 
             if (isDragging) {
@@ -80,23 +85,30 @@ LRESULT CALLBACK ScreenShotWndProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM l
                 int bottom = std::max(rectStart.y, rectEnd.y);
 
                 // Restore the screenshot brightness in the selected area
-                BitBlt(hdc, left, top, right - left, bottom - top, hdcMemory, left, top, SRCCOPY);
+                BitBlt(hdcBuffer, left, top, right - left, bottom - top, hdcMemory, left, top, SRCCOPY);
 
                 // Draw the red rectangle outline
                 HPEN hPen = CreatePen(PS_SOLID, 1, RGB(255, 0, 0));
-                HGDIOBJ hOldPen = SelectObject(hdc, hPen);
-                HGDIOBJ hOldBrush = SelectObject(hdc, GetStockObject(NULL_BRUSH));
-                Rectangle(hdc, left, top, right, bottom);
-                SelectObject(hdc, hOldPen);
-                SelectObject(hdc, hOldBrush);
+                HGDIOBJ hOldPen = SelectObject(hdcBuffer, hPen);
+                HGDIOBJ hOldBrush = SelectObject(hdcBuffer, GetStockObject(NULL_BRUSH));
+                Rectangle(hdcBuffer, left, top, right, bottom);
+                SelectObject(hdcBuffer, hOldPen);
+                SelectObject(hdcBuffer, hOldBrush);
                 DeleteObject(hPen);
             }
 
-            // Cleanup overlay and memory DC resources
+            // Copy the composed buffer to the window in one operation
+            BitBlt(hdc, 0, 0, bitmap.bmWidth, bitmap.bmHeight, hdcBuffer, 0, 0, SRCCOPY);
+
+            // Cleanup
             SelectObject(hdcOverlay, hOldOverlayBitmap);
             DeleteObject(hOverlayBitmap);
             DeleteObject(hBrush);
             DeleteDC(hdcOverlay);
+
+            SelectObject(hdcBuffer, hOldBufferBitmap);
+            DeleteObject(hBufferBitmap);
+            DeleteDC(hdcBuffer);
 
             SelectObject(hdcMemory, hOldBitmap);
             DeleteDC(hdcMemory);
