@@ -9,6 +9,8 @@
 #include <iostream>
 #include <thread>
 #include <utility>
+#include <algorithm>
+#include <cstdlib>
 
 HBITMAP screenBitmap;  // global bitmap handle; stores screenshot
 
@@ -136,6 +138,8 @@ LRESULT CALLBACK ScreenShotWndProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM l
         isDragging = false;
         GetCursorPos(&rectEnd);
         InvalidateRect(hwnd, NULL, FALSE);
+        copySelectionToClipboard(rectStart, rectEnd);
+        PostQuitMessage(0);
         return 0;
     }
     case WM_SETCURSOR: {
@@ -216,8 +220,6 @@ void captureScreenToBitmap(HBITMAP* hBitmap) {
     int screenWidth = ((double)horizontalScaling * (double)GetSystemMetrics(SM_CXSCREEN));
     int screenHeight = ((double)verticalScaling * (double)GetSystemMetrics(SM_CYSCREEN));
 
-    std::cout << screenWidth << '\n' << screenHeight << std::endl;
-
     // Create a memory DC compatible with the screen
     HDC hdcMemory = CreateCompatibleDC(hdcScreen);
 
@@ -247,4 +249,40 @@ void captureScreenToBitmap(HBITMAP* hBitmap) {
     // Cleanup
     DeleteDC(hdcMemory);
     ReleaseDC(NULL, hdcScreen);
+}
+
+// Copies the selected area from the global screenBitmap to the clipboard.
+void copySelectionToClipboard(POINT start, POINT end) {
+    int left = std::min(start.x, end.x);
+    int top = std::min(start.y, end.y);
+    int width = std::abs(end.x - start.x);
+    int height = std::abs(end.y - start.y);
+    if (width == 0 || height == 0) {
+        return;
+    }
+
+    HDC hdcScreen = GetDC(NULL);
+    HDC hdcSrc = CreateCompatibleDC(hdcScreen);
+    HBITMAP hOldSrc = (HBITMAP)SelectObject(hdcSrc, screenBitmap);
+
+    HDC hdcDst = CreateCompatibleDC(hdcScreen);
+    HBITMAP hbmCrop = CreateCompatibleBitmap(hdcScreen, width, height);
+    HBITMAP hOldDst = (HBITMAP)SelectObject(hdcDst, hbmCrop);
+
+    BitBlt(hdcDst, 0, 0, width, height, hdcSrc, left, top, SRCCOPY);
+
+    SelectObject(hdcSrc, hOldSrc);
+    SelectObject(hdcDst, hOldDst);
+    DeleteDC(hdcSrc);
+    DeleteDC(hdcDst);
+    ReleaseDC(NULL, hdcScreen);
+
+    if (OpenClipboard(NULL)) {
+        EmptyClipboard();
+        SetClipboardData(CF_BITMAP, hbmCrop);
+        CloseClipboard();
+    }
+    else {
+        DeleteObject(hbmCrop);
+    }
 }
