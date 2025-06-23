@@ -1,14 +1,14 @@
-#include <ShellScalingApi.h>
-#include <Windows.h>
+#include <windows.h>
 
 #include "displayWindow.h"
 
 
 int main() {
-    // make the application DPI (Dot Per Inch) aware
-    // basically make windows provide the actual physical dimension of the screen to the program,
-    // instead of virtual dimensions caused by scaling
-    SetProcessDpiAwareness(PROCESS_PER_MONITOR_DPI_AWARE);
+    // Make the application DPI aware so that Windows provides physical
+    // screen dimensions instead of virtual ones caused by scaling.
+    // SetProcessDPIAware is widely supported and avoids a dependency on
+    // the ShellScalingApi header when cross-compiling.
+    SetProcessDPIAware();
     captureScreenToBitmap(&screenBitmap);
     displayBitmap();
 

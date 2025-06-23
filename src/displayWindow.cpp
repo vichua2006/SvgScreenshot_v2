@@ -1,11 +1,11 @@
 #define _WIN32_WINNT 0x0603  // Windows 8.1 or later
 
-#include <ShellScalingApi.h>
-#include <Windows.h>
+#include <windows.h>
 
 #include <chrono>
 #include <iostream>
 #include <thread>
+#include <utility>
 
 #include "displayWindow.h"
 
@@ -95,7 +95,8 @@ LRESULT CALLBACK ScreenShotWndProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM l
         case WM_LBUTTONUP: {
             isDragging = false;
             GetCursorPos(&rectEnd);
-            InvalidateRect(hwnd, NULL, false);
+            InvalidateRect(hwnd, NULL, FALSE);
+            return 0;
         }
         case WM_SETCURSOR: {
             // set cursor to cross

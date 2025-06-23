@@ -1,10 +1,11 @@
 #ifndef DISWIN_h
 #define DISWIN_h
 
-#include <Windows.h>
+#include <windows.h>
 
 #include <chrono>
 #include <thread>
+#include <utility>
 
 
 std::pair<double, double> getScalingFactors();
@@ -13,5 +14,11 @@ LRESULT CALLBACK ScreenShotWndProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM l
 
 void displayBitmap();
 
-void captureScreenToBitmap(HBITMAP *hBitmap) {
-#endif
+// Captures the contents of the primary screen into the given bitmap.
+void captureScreenToBitmap(HBITMAP *hBitmap);
+
+// handle to the bitmap that stores the screenshot. Defined in
+// displayWindow.cpp so that it can be used by multiple translation units.
+extern HBITMAP screenBitmap;
+
+#endif  // DISWIN_h
