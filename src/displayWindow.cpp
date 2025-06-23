@@ -45,79 +45,79 @@ LRESULT CALLBACK ScreenShotWndProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM l
     static POINT rectStart = {}, rectEnd = {};
 
     switch (uMsg) {
-        case WM_PAINT: {
-            PAINTSTRUCT ps;
-            HDC hdc = BeginPaint(hwnd, &ps);
+    case WM_PAINT: {
+        PAINTSTRUCT ps;
+        HDC hdc = BeginPaint(hwnd, &ps);
 
-            // Create a memory DC and select the bitmap into it
-            HDC hdcMemory = CreateCompatibleDC(hdc);
-            HBITMAP hOldBitmap = (HBITMAP)SelectObject(hdcMemory, screenBitmap);
+        // Create a memory DC and select the bitmap into it
+        HDC hdcMemory = CreateCompatibleDC(hdc);
+        HBITMAP hOldBitmap = (HBITMAP)SelectObject(hdcMemory, screenBitmap);
 
-            // Get the bitmap dimensions
-            BITMAP bitmap;
-            GetObject(screenBitmap, sizeof(BITMAP), &bitmap);
+        // Get the bitmap dimensions
+        BITMAP bitmap;
+        GetObject(screenBitmap, sizeof(BITMAP), &bitmap);
 
-            // Draw the bitmap onto the window
-            BitBlt(hdc, 0, 0, bitmap.bmWidth, bitmap.bmHeight, hdcMemory, 0, 0, SRCCOPY);
+        // Draw the bitmap onto the window
+        BitBlt(hdc, 0, 0, bitmap.bmWidth, bitmap.bmHeight, hdcMemory, 0, 0, SRCCOPY);
 
-            // Cleanup
-            SelectObject(hdcMemory, hOldBitmap);
-            DeleteDC(hdcMemory);
+        // Cleanup
+        SelectObject(hdcMemory, hOldBitmap);
+        DeleteDC(hdcMemory);
 
-            // Draw the red rectangle if dragging
-            if (isDragging) {
-                HPEN hPen = CreatePen(PS_SOLID, 1, RGB(255, 0, 0));  // Red pen
-                HGDIOBJ hOldPen = SelectObject(hdc, hPen);
-                HGDIOBJ hOldBrush = SelectObject(hdc, GetStockObject(NULL_BRUSH));  // No fill
+        // Draw the red rectangle if dragging
+        if (isDragging) {
+            HPEN hPen = CreatePen(PS_SOLID, 1, RGB(255, 0, 0));  // Red pen
+            HGDIOBJ hOldPen = SelectObject(hdc, hPen);
+            HGDIOBJ hOldBrush = SelectObject(hdc, GetStockObject(NULL_BRUSH));  // No fill
 
-                Rectangle(hdc, rectStart.x, rectStart.y, rectEnd.x, rectEnd.y);
+            Rectangle(hdc, rectStart.x, rectStart.y, rectEnd.x, rectEnd.y);
 
-                SelectObject(hdc, hOldPen);
-                SelectObject(hdc, hOldBrush);
-                DeleteObject(hPen);
-            }
-
-            EndPaint(hwnd, &ps);
-            return 0;
+            SelectObject(hdc, hOldPen);
+            SelectObject(hdc, hOldBrush);
+            DeleteObject(hPen);
         }
-        case WM_LBUTTONDOWN: {
-            isDragging = true;
-            GetCursorPos(&rectStart);
-            GetCursorPos(&rectEnd);  // init end point to start point
-            return 0;
-        }
-        case WM_MOUSEMOVE: {
-            if (isDragging) {
-                GetCursorPos(&rectEnd);
-                InvalidateRect(hwnd, NULL, FALSE);  // trigger a repaint of the window
-                std::cout << rectEnd.x << ' ' << rectEnd.y << '\n';
-            }
-            return 0;
-        }
-        case WM_LBUTTONUP: {
-            isDragging = false;
+
+        EndPaint(hwnd, &ps);
+        return 0;
+    }
+    case WM_LBUTTONDOWN: {
+        isDragging = true;
+        GetCursorPos(&rectStart);
+        GetCursorPos(&rectEnd);  // init end point to start point
+        return 0;
+    }
+    case WM_MOUSEMOVE: {
+        if (isDragging) {
             GetCursorPos(&rectEnd);
-            InvalidateRect(hwnd, NULL, FALSE);
-            copySelectionToClipboard(rectStart, rectEnd);
-            PostQuitMessage(0);
-            return 0;
+            InvalidateRect(hwnd, NULL, FALSE);  // trigger a repaint of the window
+            std::cout << rectEnd.x << ' ' << rectEnd.y << '\n';
         }
-        case WM_SETCURSOR: {
-            // set cursor to cross
-            SetCursor(LoadCursor(NULL, IDC_CROSS));
-            return TRUE;
+        return 0;
+    }
+    case WM_LBUTTONUP: {
+        isDragging = false;
+        GetCursorPos(&rectEnd);
+        InvalidateRect(hwnd, NULL, FALSE);
+        copySelectionToClipboard(rectStart, rectEnd);
+        PostQuitMessage(0);
+        return 0;
+    }
+    case WM_SETCURSOR: {
+        // set cursor to cross
+        SetCursor(LoadCursor(NULL, IDC_CROSS));
+        return TRUE;
+    }
+    case WM_KEYDOWN: {
+        // Close the window when ESC is pressed
+        if (wParam == VK_ESCAPE) {
+            PostQuitMessage(0);  // Posts a WM_QUIT message to exit the message loop
         }
-        case WM_KEYDOWN: {
-            // Close the window when ESC is pressed
-            if (wParam == VK_ESCAPE) {
-                PostQuitMessage(0);  // Posts a WM_QUIT message to exit the message loop
-            }
-            return 0;
-        }
+        return 0;
+    }
 
-        case WM_DESTROY:
-            PostQuitMessage(0);
-            return 0;
+    case WM_DESTROY:
+        PostQuitMessage(0);
+        return 0;
     }
     return DefWindowProc(hwnd, uMsg, wParam, lParam);
 }
@@ -144,14 +144,14 @@ void displayBitmap() {
 
     // Create the window
     HWND hwnd = CreateWindowEx(WS_EX_TOOLWINDOW,  // prevents window appearing in alt+tab list
-                               CLASS_NAME,        // Window class
-                               "",                // Window title
-                               WS_POPUP,          // Window style
-                               0, 0, screenWidth, screenHeight,
-                               NULL,                   // Parent window
-                               NULL,                   // Menu
-                               GetModuleHandle(NULL),  // Instance handle
-                               NULL                    // Additional application data
+        CLASS_NAME,        // Window class
+        "",                // Window title
+        WS_POPUP,          // Window style
+        0, 0, screenWidth, screenHeight,
+        NULL,                   // Parent window
+        NULL,                   // Menu
+        GetModuleHandle(NULL),  // Instance handle
+        NULL                    // Additional application data
     );
 
     if (!hwnd) {
@@ -171,7 +171,7 @@ void displayBitmap() {
 }
 
 // mutates the given bitmap
-void captureScreenToBitmap(HBITMAP *hBitmap) {
+void captureScreenToBitmap(HBITMAP* hBitmap) {
     // Get the device context of the entire screen
     HDC hdcScreen = GetDC(NULL);
 
@@ -179,8 +179,6 @@ void captureScreenToBitmap(HBITMAP *hBitmap) {
     auto [horizontalScaling, verticalScaling] = getScalingFactors();
     int screenWidth = ((double)horizontalScaling * (double)GetSystemMetrics(SM_CXSCREEN));
     int screenHeight = ((double)verticalScaling * (double)GetSystemMetrics(SM_CYSCREEN));
-
-    std::cout << screenWidth << '\n' << screenHeight << std::endl;
 
     // Create a memory DC compatible with the screen
     HDC hdcMemory = CreateCompatibleDC(hdcScreen);
@@ -243,7 +241,8 @@ void copySelectionToClipboard(POINT start, POINT end) {
         EmptyClipboard();
         SetClipboardData(CF_BITMAP, hbmCrop);
         CloseClipboard();
-    } else {
+    }
+    else {
         DeleteObject(hbmCrop);
     }
 }
