@@ -1,4 +1,4 @@
-# SvgScreenshot_v2
+#SvgScreenshot_v2
 
 This is a small experiment for capturing and displaying a screenshot using the Windows API.
 
@@ -10,11 +10,27 @@ This project targets Windows and requires the Windows SDK. On Debian-based syste
 ./setup.sh
 ```
 
-### Using CMake (Recommended)
+After the dependencies are installed, you can build using the provided
+`Makefile` or CMake.
 
-The project now supports CMake for easier dependency management and cross-platform builds:
+### Makefile
+make                # or 'make OPENCV=1' if OpenCV is installed
 
 ```bash
+
+### CMake
+
+An alternative build system is provided via `CMakeLists.txt`.
+Generate the build files in a separate directory and then build:
+
+```bash
+mkdir build
+cd build
+cmake .. -DCMAKE_CXX_COMPILER=x86_64-w64-mingw32-g++
+cmake --build .
+```
+
+The resulting binary will also be named `screenshot.exe`.
 # Create build directory
 mkdir build
 cd build

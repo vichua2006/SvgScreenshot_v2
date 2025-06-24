@@ -6,15 +6,16 @@
 
 #include <algorithm>
 #include <chrono>
+#include <cstdlib>
 #include <iostream>
 #include <thread>
 #include <utility>
-#include <algorithm>
-#include <cstdlib>
-#include <locale>
+#ifdef USE_OPENCV
 #include <codecvt>
-#include <vector>
+#include <locale>
 #include <opencv2/opencv.hpp>
+#include <vector>
+#endif
 
 HBITMAP screenBitmap;  // global bitmap handle; stores screenshot
 
@@ -50,118 +51,118 @@ LRESULT CALLBACK ScreenShotWndProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM l
     static POINT rectStart = {}, rectEnd = {};
 
     switch (uMsg) {
-    case WM_PAINT: {
-        PAINTSTRUCT ps;
-        HDC hdc = BeginPaint(hwnd, &ps);
+        case WM_PAINT: {
+            PAINTSTRUCT ps;
+            HDC hdc = BeginPaint(hwnd, &ps);
 
-        // Create a memory DC for the screenshot
-        HDC hdcMemory = CreateCompatibleDC(hdc);
-        HBITMAP hOldBitmap = (HBITMAP)SelectObject(hdcMemory, screenBitmap);
+            // Create a memory DC for the screenshot
+            HDC hdcMemory = CreateCompatibleDC(hdc);
+            HBITMAP hOldBitmap = (HBITMAP)SelectObject(hdcMemory, screenBitmap);
 
-        // Get the bitmap dimensions
-        BITMAP bitmap;
-        GetObject(screenBitmap, sizeof(BITMAP), &bitmap);
+            // Get the bitmap dimensions
+            BITMAP bitmap;
+            GetObject(screenBitmap, sizeof(BITMAP), &bitmap);
 
-        // Create an off-screen buffer to avoid flicker when redrawing
-        HDC hdcBuffer = CreateCompatibleDC(hdc);
-        HBITMAP hBufferBitmap = CreateCompatibleBitmap(hdc, bitmap.bmWidth, bitmap.bmHeight);
-        HBITMAP hOldBufferBitmap = (HBITMAP)SelectObject(hdcBuffer, hBufferBitmap);
+            // Create an off-screen buffer to avoid flicker when redrawing
+            HDC hdcBuffer = CreateCompatibleDC(hdc);
+            HBITMAP hBufferBitmap = CreateCompatibleBitmap(hdc, bitmap.bmWidth, bitmap.bmHeight);
+            HBITMAP hOldBufferBitmap = (HBITMAP)SelectObject(hdcBuffer, hBufferBitmap);
 
-        // Draw the screenshot into the buffer first
-        BitBlt(hdcBuffer, 0, 0, bitmap.bmWidth, bitmap.bmHeight, hdcMemory, 0, 0, SRCCOPY);
+            // Draw the screenshot into the buffer first
+            BitBlt(hdcBuffer, 0, 0, bitmap.bmWidth, bitmap.bmHeight, hdcMemory, 0, 0, SRCCOPY);
 
-        // Create a semi-transparent overlay to darken the entire screen
-        HDC hdcOverlay = CreateCompatibleDC(hdc);
-        HBITMAP hOverlayBitmap =
-            CreateCompatibleBitmap(hdc, bitmap.bmWidth, bitmap.bmHeight);
-        HBITMAP hOldOverlayBitmap = (HBITMAP)SelectObject(hdcOverlay, hOverlayBitmap);
-        HBRUSH hBrush = CreateSolidBrush(RGB(0, 0, 0));
-        RECT fullRect = { 0, 0, bitmap.bmWidth, bitmap.bmHeight };
-        FillRect(hdcOverlay, &fullRect, hBrush);
+            // Create a semi-transparent overlay to darken the entire screen
+            HDC hdcOverlay = CreateCompatibleDC(hdc);
+            HBITMAP hOverlayBitmap = CreateCompatibleBitmap(hdc, bitmap.bmWidth, bitmap.bmHeight);
+            HBITMAP hOldOverlayBitmap = (HBITMAP)SelectObject(hdcOverlay, hOverlayBitmap);
+            HBRUSH hBrush = CreateSolidBrush(RGB(0, 0, 0));
+            RECT fullRect = {0, 0, bitmap.bmWidth, bitmap.bmHeight};
+            FillRect(hdcOverlay, &fullRect, hBrush);
 
-        BLENDFUNCTION blend = { AC_SRC_OVER, 0, 128, 0 };  // 50% opacity
-        AlphaBlend(hdcBuffer, 0, 0, bitmap.bmWidth, bitmap.bmHeight, hdcOverlay, 0, 0,
-            bitmap.bmWidth, bitmap.bmHeight, blend);
+            BLENDFUNCTION blend = {AC_SRC_OVER, 0, 128, 0};  // 50% opacity
+            AlphaBlend(hdcBuffer, 0, 0, bitmap.bmWidth, bitmap.bmHeight, hdcOverlay, 0, 0,
+                       bitmap.bmWidth, bitmap.bmHeight, blend);
 
-        // Draw the red rectangle and darken the area outside of it if dragging
-        if (isDragging) {
-            // Normalize the rectangle coordinates in case the user drags in any direction
-            int left = std::min(rectStart.x, rectEnd.x);
-            int top = std::min(rectStart.y, rectEnd.y);
-            int right = std::max(rectStart.x, rectEnd.x);
-            int bottom = std::max(rectStart.y, rectEnd.y);
+            // Draw the red rectangle and darken the area outside of it if dragging
+            if (isDragging) {
+                // Normalize the rectangle coordinates in case the user drags in any direction
+                int left = std::min(rectStart.x, rectEnd.x);
+                int top = std::min(rectStart.y, rectEnd.y);
+                int right = std::max(rectStart.x, rectEnd.x);
+                int bottom = std::max(rectStart.y, rectEnd.y);
 
-            // Restore the screenshot brightness in the selected area
-            BitBlt(hdcBuffer, left, top, right - left, bottom - top, hdcMemory, left, top, SRCCOPY);
+                // Restore the screenshot brightness in the selected area
+                BitBlt(hdcBuffer, left, top, right - left, bottom - top, hdcMemory, left, top,
+                       SRCCOPY);
 
-            // Draw the red rectangle outline
-            HPEN hPen = CreatePen(PS_SOLID, 1, RGB(255, 0, 0));
-            HGDIOBJ hOldPen = SelectObject(hdcBuffer, hPen);
-            HGDIOBJ hOldBrush = SelectObject(hdcBuffer, GetStockObject(NULL_BRUSH));
-            Rectangle(hdcBuffer, left, top, right, bottom);
-            SelectObject(hdcBuffer, hOldPen);
-            SelectObject(hdcBuffer, hOldBrush);
-            DeleteObject(hPen);
+                // Draw the red rectangle outline
+                HPEN hPen = CreatePen(PS_SOLID, 1, RGB(255, 0, 0));
+                HGDIOBJ hOldPen = SelectObject(hdcBuffer, hPen);
+                HGDIOBJ hOldBrush = SelectObject(hdcBuffer, GetStockObject(NULL_BRUSH));
+                Rectangle(hdcBuffer, left, top, right, bottom);
+                SelectObject(hdcBuffer, hOldPen);
+                SelectObject(hdcBuffer, hOldBrush);
+                DeleteObject(hPen);
+                DeleteDC(hdcOverlay);
+            }
+
+            // Copy the composed buffer to the window in one operation
+            BitBlt(hdc, 0, 0, bitmap.bmWidth, bitmap.bmHeight, hdcBuffer, 0, 0, SRCCOPY);
+
+            // Cleanup
+            SelectObject(hdcOverlay, hOldOverlayBitmap);
+            DeleteObject(hOverlayBitmap);
+            DeleteObject(hBrush);
             DeleteDC(hdcOverlay);
+
+            SelectObject(hdcBuffer, hOldBufferBitmap);
+            DeleteObject(hBufferBitmap);
+            DeleteDC(hdcBuffer);
+
+            SelectObject(hdcMemory, hOldBitmap);
+            DeleteDC(hdcMemory);
+
+            EndPaint(hwnd, &ps);
+            return 0;
         }
-
-        // Copy the composed buffer to the window in one operation
-        BitBlt(hdc, 0, 0, bitmap.bmWidth, bitmap.bmHeight, hdcBuffer, 0, 0, SRCCOPY);
-
-        // Cleanup
-        SelectObject(hdcOverlay, hOldOverlayBitmap);
-        DeleteObject(hOverlayBitmap);
-        DeleteObject(hBrush);
-        DeleteDC(hdcOverlay);
-
-        SelectObject(hdcBuffer, hOldBufferBitmap);
-        DeleteObject(hBufferBitmap);
-        DeleteDC(hdcBuffer);
-
-        SelectObject(hdcMemory, hOldBitmap);
-        DeleteDC(hdcMemory);
-
-        EndPaint(hwnd, &ps);
-        return 0;
-    }
-    case WM_LBUTTONDOWN: {
-        isDragging = true;
-        GetCursorPos(&rectStart);
-        GetCursorPos(&rectEnd);  // init end point to start point
-        return 0;
-    }
-    case WM_MOUSEMOVE: {
-        if (isDragging) {
+        case WM_LBUTTONDOWN: {
+            isDragging = true;
+            GetCursorPos(&rectStart);
+            GetCursorPos(&rectEnd);  // init end point to start point
+            return 0;
+        }
+        case WM_MOUSEMOVE: {
+            if (isDragging) {
+                GetCursorPos(&rectEnd);
+                InvalidateRect(hwnd, NULL, FALSE);  // trigger a repaint of the window
+                std::cout << rectEnd.x << ' ' << rectEnd.y << '\n';
+            }
+            return 0;
+        }
+        case WM_LBUTTONUP: {
+            isDragging = false;
             GetCursorPos(&rectEnd);
-            InvalidateRect(hwnd, NULL, FALSE);  // trigger a repaint of the window
-            std::cout << rectEnd.x << ' ' << rectEnd.y << '\n';
+            InvalidateRect(hwnd, NULL, FALSE);
+            copySelectionToClipboard(rectStart, rectEnd);
+            PostQuitMessage(0);
+            return 0;
         }
-        return 0;
-    }
-    case WM_LBUTTONUP: {
-        isDragging = false;
-        GetCursorPos(&rectEnd);
-        InvalidateRect(hwnd, NULL, FALSE);
-        copySelectionToClipboard(rectStart, rectEnd);
-        PostQuitMessage(0);
-        return 0;
-    }
-    case WM_SETCURSOR: {
-        // set cursor to cross
-        SetCursor(LoadCursor(NULL, IDC_CROSS));
-        return TRUE;
-    }
-    case WM_KEYDOWN: {
-        // Close the window when ESC is pressed
-        if (wParam == VK_ESCAPE) {
-            PostQuitMessage(0);  // Posts a WM_QUIT message to exit the message loop
+        case WM_SETCURSOR: {
+            // set cursor to cross
+            SetCursor(LoadCursor(NULL, IDC_CROSS));
+            return TRUE;
         }
-        return 0;
-    }
+        case WM_KEYDOWN: {
+            // Close the window when ESC is pressed
+            if (wParam == VK_ESCAPE) {
+                PostQuitMessage(0);  // Posts a WM_QUIT message to exit the message loop
+            }
+            return 0;
+        }
 
-    case WM_DESTROY:
-        PostQuitMessage(0);
-        return 0;
+        case WM_DESTROY:
+            PostQuitMessage(0);
+            return 0;
     }
     return DefWindowProc(hwnd, uMsg, wParam, lParam);
 }
@@ -188,14 +189,14 @@ void displayBitmap() {
 
     // Create the window
     HWND hwnd = CreateWindowEx(WS_EX_TOOLWINDOW,  // prevents window appearing in alt+tab list
-        CLASS_NAME,        // Window class
-        "",                // Window title
-        WS_POPUP,          // Window style
-        0, 0, screenWidth, screenHeight,
-        NULL,                   // Parent window
-        NULL,                   // Menu
-        GetModuleHandle(NULL),  // Instance handle
-        NULL                    // Additional application data
+                               CLASS_NAME,        // Window class
+                               "",                // Window title
+                               WS_POPUP,          // Window style
+                               0, 0, screenWidth, screenHeight,
+                               NULL,                   // Parent window
+                               NULL,                   // Menu
+                               GetModuleHandle(NULL),  // Instance handle
+                               NULL                    // Additional application data
     );
 
     if (!hwnd) {
@@ -285,12 +286,12 @@ void copySelectionToClipboard(POINT start, POINT end) {
         EmptyClipboard();
         SetClipboardData(CF_BITMAP, hbmCrop);
         CloseClipboard();
-    }
-    else {
+    } else {
         DeleteObject(hbmCrop);
     }
 }
 
+#ifdef USE_OPENCV
 bool saveBitmapAsPngWithoutBackground(HBITMAP bitmap, const wchar_t* filename) {
     if (!bitmap || !filename) {
         return false;
@@ -304,7 +305,7 @@ bool saveBitmapAsPngWithoutBackground(HBITMAP bitmap, const wchar_t* filename) {
     BITMAPINFO bmi = {};
     bmi.bmiHeader.biSize = sizeof(BITMAPINFOHEADER);
     bmi.bmiHeader.biWidth = bmp.bmWidth;
-    bmi.bmiHeader.biHeight = -bmp.bmHeight; // top-down
+    bmi.bmiHeader.biHeight = -bmp.bmHeight;  // top-down
     bmi.bmiHeader.biPlanes = 1;
     bmi.bmiHeader.biBitCount = 32;
     bmi.bmiHeader.biCompression = BI_RGB;
@@ -322,7 +323,7 @@ bool saveBitmapAsPngWithoutBackground(HBITMAP bitmap, const wchar_t* filename) {
 
     cv::Mat mask;
     cv::threshold(gray, mask, 250, 255, cv::THRESH_BINARY);
-    cv::Mat kernel = cv::getStructuringElement(cv::MORPH_RECT, cv::Size(3,3));
+    cv::Mat kernel = cv::getStructuringElement(cv::MORPH_RECT, cv::Size(3, 3));
     cv::morphologyEx(mask, mask, cv::MORPH_CLOSE, kernel);
     cv::bitwise_not(mask, mask);
 
@@ -336,3 +337,6 @@ bool saveBitmapAsPngWithoutBackground(HBITMAP bitmap, const wchar_t* filename) {
 
     return cv::imwrite(path, img);
 }
+#else
+bool saveBitmapAsPngWithoutBackground(HBITMAP, const wchar_t*) { return false; }
+#endif
