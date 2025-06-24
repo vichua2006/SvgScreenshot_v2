@@ -53,3 +53,6 @@ Thumbs.db
 # Ignore todo list files
 /todo/
 *.todo
+
+# Ignore vcpkg
+vcpkg/
