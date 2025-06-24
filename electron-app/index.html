@@ -3,10 +3,19 @@
 <head>
   <meta charset="UTF-8">
   <title>Screenshots</title>
+  <style>
+    body {
+      font-family: sans-serif;
+      margin: 0;
+      padding: 20px;
+    }
+  </style>
 </head>
 <body>
-  <h1>Screenshots</h1>
-  <div id="images"></div>
-  <script src="renderer.js"></script>
+  <div id="root"></div>
+  <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+  <script src="https://unpkg.com/babel-standalone@6/babel.min.js"></script>
+  <script src="renderer.js" type="text/babel"></script>
 </body>
 </html>
