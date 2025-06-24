@@ -56,6 +56,13 @@ Thumbs.db
 # Ignore todo list files
 /todo/
 *.todo
+
+# Ignore Electron dependencies
+electron-app/node_modules/
+electron-app/package-lock.json
+
+# Ignore screenshots
+screenshots/
 # Python artifacts
 __pycache__/
 *.py[cod]

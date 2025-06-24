@@ -1,4 +1,4 @@
-CXX ?= x86_64-w64-mingw32-g++
+CXX := x86_64-w64-mingw32-g++
 CXXFLAGS ?= -std=c++17 -Wall -O2
 LDFLAGS = -lgdi32 -lole32 -luuid -lcomdlg32 -lshell32 -lmsimg32
 

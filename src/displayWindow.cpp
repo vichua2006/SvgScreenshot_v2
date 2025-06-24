@@ -11,6 +11,8 @@
 #include <utility>
 #include <algorithm>
 #include <cstdlib>
+#include <string>
+#include <vector>
 
 HBITMAP screenBitmap;  // global bitmap handle; stores screenshot
 
@@ -251,7 +253,43 @@ void captureScreenToBitmap(HBITMAP* hBitmap) {
     ReleaseDC(NULL, hdcScreen);
 }
 
-// Copies the selected area from the global screenBitmap to the clipboard.
+static void saveBitmapToFile(HBITMAP hBitmap, const std::wstring& path) {
+    BITMAP bmp;
+    GetObject(hBitmap, sizeof(BITMAP), &bmp);
+
+    BITMAPINFOHEADER bi{};
+    bi.biSize = sizeof(BITMAPINFOHEADER);
+    bi.biWidth = bmp.bmWidth;
+    bi.biHeight = bmp.bmHeight;
+    bi.biPlanes = 1;
+    bi.biBitCount = 32;
+    bi.biCompression = BI_RGB;
+
+    DWORD dwBmpSize = ((bmp.bmWidth * bi.biBitCount + 31) / 32) * 4 * bmp.bmHeight;
+    std::vector<BYTE> pixels(dwBmpSize);
+
+    HDC hdc = GetDC(NULL);
+    GetDIBits(hdc, hBitmap, 0, bmp.bmHeight, pixels.data(), reinterpret_cast<BITMAPINFO*>(&bi), DIB_RGB_COLORS);
+    ReleaseDC(NULL, hdc);
+
+    BITMAPFILEHEADER bmfHeader{};
+    bmfHeader.bfType = 0x4D42;
+    bmfHeader.bfOffBits = sizeof(BITMAPFILEHEADER) + sizeof(BITMAPINFOHEADER);
+    bmfHeader.bfSize = dwBmpSize + bmfHeader.bfOffBits;
+
+    HANDLE hFile = CreateFileW(path.c_str(), GENERIC_WRITE, 0, NULL, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
+    if (hFile == INVALID_HANDLE_VALUE) {
+        return;
+    }
+
+    DWORD dwWritten = 0;
+    WriteFile(hFile, &bmfHeader, sizeof(bmfHeader), &dwWritten, NULL);
+    WriteFile(hFile, &bi, sizeof(bi), &dwWritten, NULL);
+    WriteFile(hFile, pixels.data(), dwBmpSize, &dwWritten, NULL);
+    CloseHandle(hFile);
+}
+
+// Copies the selected area from the global screenBitmap to the clipboard and saves it to disk.
 void copySelectionToClipboard(POINT start, POINT end) {
     int left = std::min(start.x, end.x);
     int top = std::min(start.y, end.y);
@@ -285,4 +323,11 @@ void copySelectionToClipboard(POINT start, POINT end) {
     else {
         DeleteObject(hbmCrop);
     }
+
+    CreateDirectoryA("screenshots", NULL);
+    auto now = std::chrono::system_clock::now();
+    auto ts = std::chrono::system_clock::to_time_t(now);
+    wchar_t path[MAX_PATH];
+    swprintf(path, L"./screenshots/screenshot_%lld.bmp", (long long)ts);
+    saveBitmapToFile(hbmCrop, path);
 }
