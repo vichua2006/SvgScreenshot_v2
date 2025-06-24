@@ -34,9 +34,9 @@ as `mingw-w64`.
 Captured selections are now written to the `screenshots` directory in the
 repository root. Each file is saved as `screenshot_<timestamp>.bmp`.
 
-An example Electron application lives in `electron-app`. It lists the images in
-the screenshots folder and displays them. Run it after installing dependencies
-with:
+An example Electron application lives in `electron-app`. It now uses a small
+React interface that shows each screenshot in a fixed size card with a button to
+copy the image to your clipboard. Run it after installing dependencies with:
 
 ```bash
 cd electron-app
