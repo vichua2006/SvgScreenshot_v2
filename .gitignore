@@ -7,6 +7,9 @@
 # Ignore Visual Studio Code settings
 .vscode/
 
+# Ignore .env files
+.env
+
 # Ignore CMake build files
 CMakeFiles/
 CMakeCache.txt
@@ -60,3 +63,8 @@ electron-app/package-lock.json
 
 # Ignore screenshots
 screenshots/
+# Python artifacts
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/

@@ -16,6 +16,7 @@ After the dependencies are installed, build the project using the provided
 ```bash
 make
 ```
+
 If the build fails with `windows.h: No such file or directory`, run `./setup.sh`
 to install the MinGW cross toolchain. The successful build produces
 `screenshot.exe` in the repository root. If you prefer to
@@ -46,3 +47,18 @@ npm start
 When running as the root user (such as in some containers) the Electron runtime
 requires the `--no-sandbox` flag. The provided `npm start` script already adds
 this flag.
+
+## FastAPI backend
+
+This repository also includes a small FastAPI application for storing screenshot metadata in MongoDB. The server exposes two endpoints to create and list screenshots.
+
+### Running
+
+Install the Python dependencies and start the server with Uvicorn:
+
+```bash
+pip install -r requirements.txt
+MONGO_URI="<your mongodb atlas uri>" uvicorn backend.main:app --reload
+```
+
+The API uses a collection called `screenShots` in the database specified by the `MONGO_DB_NAME` environment variable (defaults to `screenshots_db`).
